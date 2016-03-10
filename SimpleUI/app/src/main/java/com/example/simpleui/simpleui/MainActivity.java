@@ -1,36 +1,53 @@
 package com.example.simpleui.simpleui;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
     TextView textView;
     EditText editText;
-    CheckBox hideCheckbox;
+    CheckBox hideCheckBox;
+    ListView listView;
+    Spinner spinner;
 
-    @Override
+    SharedPreferences sp;
+    SharedPreferences.Editor editor;
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         textView = (TextView)findViewById(R.id.textView);
         editText = (EditText)findViewById(R.id.editText);
-        hideCheckbox = (CheckBox)findViewById(R.id.checkBox);
+        listView = (ListView)findViewById(R.id.listView);
+        spinner = (Spinner)findViewById(R.id.spinner);
 
-        editText.setOnKeyListener(new View.OnKeyListener()
-        {
+
+        sp = getSharedPreferences("setting", Context.MODE_PRIVATE);
+        editor = sp.edit();
+
+        editText.setText(sp.getString("editText", ""));
+
+        editText.setOnKeyListener(new View.OnKeyListener() {
             @Override
-            public boolean onKey(View v, int keyCode, KeyEvent event)
-            {
-                if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)
-                {
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                editor.putString("setting", editText.getText().toString());
+                editor.apply();
+                if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
                     submit(v);
                     return true;
                 }
@@ -39,13 +56,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //開起虛擬鍵盤的輸入
-        editText.setOnEditorActionListener(new TextView.OnEditorActionListener()
-        {
+        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event)
-            {
-                if (actionId == EditorInfo.IME_ACTION_DONE)
-                {
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     submit(v);
                     return true;
                 }
@@ -53,6 +67,36 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        hideCheckBox = (CheckBox)findViewById(R.id.checkBox);
+
+        hideCheckBox.setChecked(sp.getBoolean("hideCheckBox", false));
+        hideCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                editor.putBoolean("hideCheckBox", hideCheckBox.isChecked());
+                editor.apply();
+            }
+        });
+
+        setListView();
+        setSpinner();
+
+    }
+
+    private void setListView()
+    {
+        String[] data = Utils.readFile(this, "history.txt").split("\n");
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, data);
+        listView.setAdapter(adapter);
+    }
+
+    private void setSpinner()
+    {
+        String[] data = getResources().getStringArray(R.array.storyInfo);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, data);
+        spinner.setAdapter(adapter);
     }
 
     public void submit (View view)
@@ -62,7 +106,9 @@ public class MainActivity extends AppCompatActivity {
 
         String text = editText.getText().toString();
 
-        if (hideCheckbox.isChecked())
+        Utils.writeFile(this, "history.txt", text + '\n');
+
+        if (hideCheckBox.isChecked())
         {
             Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
             textView.setText("*****");
@@ -71,5 +117,7 @@ public class MainActivity extends AppCompatActivity {
         }
         textView.setText(text);
         editText.setText("");
+
+        setListView();
     }
 }
