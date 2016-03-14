@@ -1,10 +1,12 @@
 package com.example.simpleui.simpleui;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -18,6 +20,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int REQUEST_CODE_MENU_ACTIVITY = 0;
+
     TextView textView;
     EditText editText;
     CheckBox hideCheckBox;
@@ -25,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
     Spinner spinner;
 
     SharedPreferences sp;
-    SharedPreferences.Editor editor;
+    Editor editor;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -45,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
         editText.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View v, int keyCode, KeyEvent event) {
-                editor.putString("setting", editText.getText().toString());
+                editor.putString("editText", editText.getText().toString());
                 editor.apply();
                 if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
                     submit(v);
@@ -119,5 +124,70 @@ public class MainActivity extends AppCompatActivity {
         editText.setText("");
 
         setListView();
+    }
+
+    public void goToMenu(View view)
+    {
+        //Intent傳遞Activity
+        Intent intent = new Intent();
+        intent.setClass(this, DrinkMenuActivity.class);
+
+        //startActivity(intent);  //啟動Activity為Start狀態
+        startActivityForResult(intent, REQUEST_CODE_MENU_ACTIVITY);  //啟動Activity為Start狀態BY REQUEST_CODE
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        Log.d("debug", "[DEBUG]main activity result");
+
+        if (requestCode == REQUEST_CODE_MENU_ACTIVITY)
+        {
+            if (resultCode == RESULT_OK)
+            {
+                textView.setText(data.getStringExtra("result"));  //result的值為 order done(定義在DrinkMenuActivity的done function())
+            }
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d("debug", "[DEBUG]Main onStart");
+
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.d("debug", "[DEBUG]Main onRestart");
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d("debug", "[DEBUG]Main onResume");
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d("debug", "[DEBUG]Main onPause");
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d("debug", "[DEBUG]Main onStop");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.d("debug", "[DEBUG]Main onDestroy");
     }
 }
