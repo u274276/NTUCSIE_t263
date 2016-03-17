@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="storyInfo">
-        <item>Ha</item>
-        <item>TE</item>
-        <item>天氣</item>
-        <item>晴天</item>
+        <item>台大店</item>
+        <item>TEA店</item>
+        <item>COCO</item>
+        <item>露易莎</item>
         <item>你媽卡好</item>
     </string-array>
 </resources>
