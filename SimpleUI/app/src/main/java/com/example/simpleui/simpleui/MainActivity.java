@@ -4,44 +4,64 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.parse.FindCallback;
 import com.parse.Parse;
 import com.parse.ParseException;
 import com.parse.ParseObject;
+import com.parse.ParseQuery;
 import com.parse.SaveCallback;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.Manifest;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_MENU_ACTIVITY = 0;
+    private static final int REQUEST_CODE_CAMERA = 1;
 
     TextView textView;
     EditText editText;
     CheckBox hideCheckBox;
     ListView listView;
     Spinner spinner;
+    ImageView photoView;
 
     SharedPreferences sp;
     Editor editor;
 
     String menuResult;
+    List<ParseObject> queryResults;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
         editText = (EditText)findViewById(R.id.editText);
         listView = (ListView)findViewById(R.id.listView);
         spinner = (Spinner)findViewById(R.id.spinner);
+        photoView = (ImageView)findViewById(R.id.photoView);
 
 
         sp = getSharedPreferences("setting", Context.MODE_PRIVATE);
@@ -97,11 +118,7 @@ public class MainActivity extends AppCompatActivity {
         setListView();
         setSpinner();
 
-        //parse.com
 
-        Parse.enableLocalDatastore(this);
-
-        Parse.initialize(this);
 
         //ParseObject testObject = new ParseObject("HomeworkParse");
         ParseObject testObject = new ParseObject("TestObject");
@@ -123,18 +140,74 @@ public class MainActivity extends AppCompatActivity {
 
     private void setListView()
     {
-        String[] data = Utils.readFile(this, "history.txt").split("\n");
+        //第6堂課被註解掉
+        //String[] data = Utils.readFile(this, "history.txt").split("\n");
+        //ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, data);
+        //listView.setAdapter(adapter);
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, data);
-        listView.setAdapter(adapter);
+        //第6堂課改寫的內容
+        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Order");
+        query.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> list, ParseException e) {
+                if (e != null) {
+                    Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                queryResults = list;
+
+                List<Map<String, String>> data = new ArrayList<Map<String, String>>();
+                for (int i = 0; i < queryResults.size(); i++) {
+                    ParseObject object = queryResults.get(i);
+                    String note = object.getString("note");
+                    String storeInfo = object.getString("storeInfo");
+                    String menu = object.getString("menu");
+
+                    Map<String, String> item = new HashMap<String, String>();
+                    item.put("note", note);
+                    item.put("storeInfo", storeInfo);
+                    item.put("drinkNum", "15");
+
+                    data.add(item);
+                }
+                String[] from = {"note", "storeInfo", "drinkNum"};
+                int[] to = {R.id.note, R.id.storeInfo, R.id.drinkNum};
+                SimpleAdapter adapter = new SimpleAdapter(MainActivity.this, data, R.layout.listview_item, from, to);
+                listView.setAdapter(adapter);
+            }
+        });
     }
 
     private void setSpinner()
     {
+        /*
         String[] data = getResources().getStringArray(R.array.storyInfo);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, data);
         spinner.setAdapter(adapter);
+        */
+
+        //第6堂課改寫
+        ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("StoreInfo");
+
+        query.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> list, ParseException e) {
+                if (e != null) {
+                    Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                String[] stores = new String[list.size()];
+                for (int i = 0; i < list.size(); i++) {
+                    ParseObject object = list.get(i);
+                    stores[i] = object.getString("name") + "," + object.getString("address");
+                }
+                ArrayAdapter<String> storeAdapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, stores);
+                spinner.setAdapter(storeAdapter);
+            }
+        });
     }
 
     public void submit (View view)
@@ -219,6 +292,48 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+        else if (requestCode == REQUEST_CODE_CAMERA)
+        {
+            if (resultCode == RESULT_OK)
+            {
+                photoView.setImageURI(Utils.getPhotoUri());
+            }
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        int id = item.getItemId();
+
+        if (id == R.id.action_take_photo)
+        {
+            goToCamera();
+            Toast.makeText(this, "take photo", Toast.LENGTH_LONG).show();
+        }
+
+        return super.onOptionsItemSelected(item);
+
+    }
+
+    private void goToCamera()
+    {
+        /*if (Build.VERSION.SDK_INT >= 23)
+        {
+            if(checkSelfPermission(Manifest.))
+        }*/
+        Intent intent = new Intent();
+        intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, Utils.getPhotoUri());
+
+        //startActivity(intent);
+        startActivityForResult(intent, REQUEST_CODE_CAMERA);
     }
 
     @Override
