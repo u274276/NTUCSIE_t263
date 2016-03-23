@@ -133,9 +133,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-
-
-
     }
 
     private void setListView()
@@ -146,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
         //listView.setAdapter(adapter);
 
         //第6堂課改寫的內容
+        //讀取ParseObject物件:找尋ParseServer上Class為Order下的ParseObject物件(許多ParseObject組成)
         ParseQuery<ParseObject> query = new ParseQuery<ParseObject>("Order");
         query.findInBackground(new FindCallback<ParseObject>() {
             @Override
@@ -167,16 +165,50 @@ public class MainActivity extends AppCompatActivity {
                     Map<String, String> item = new HashMap<String, String>();
                     item.put("note", note);
                     item.put("storeInfo", storeInfo);
-                    item.put("drinkNum", "15");
+                    item.put("drinkNum", String.valueOf(count_menuResult(menu)));
+                    //item.put("drinkNum", menu);
 
                     data.add(item);
                 }
                 String[] from = {"note", "storeInfo", "drinkNum"};
                 int[] to = {R.id.note, R.id.storeInfo, R.id.drinkNum};
+                //將listview_item Layout Adapter到MainActivity(activity_main) Layout, data: Map data, from:key值 to:layout elements.
                 SimpleAdapter adapter = new SimpleAdapter(MainActivity.this, data, R.layout.listview_item, from, to);
                 listView.setAdapter(adapter);
             }
         });
+    }
+
+    public int count_menuResult(String menuResult) {
+        int cnt = 0;
+
+        try {
+            JSONArray array = new JSONArray(menuResult);  //將menuResult(JSONArray=>String)轉成JSONArray(String=>JSONArray)
+
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject order = array.getJSONObject(i);
+
+                if (!order.isNull("lNumber"))
+                {
+                    cnt += order.getInt("lNumber");
+                }
+                if (!order.isNull("mNumber"))
+                {
+                    cnt += order.getInt("mNumber");
+                }
+                if (!order.isNull("l"))
+                {
+                    cnt += order.getInt("l");
+                }
+                if (!order.isNull("m"))
+                {
+                    cnt += order.getInt("m");
+                }
+            }
+        }catch(JSONException e){
+            e.printStackTrace();
+        }
+        return cnt;
     }
 
     private void setSpinner()
@@ -217,11 +249,13 @@ public class MainActivity extends AppCompatActivity {
 
         String text = editText.getText().toString();
 
-        ParseObject orderObject = new ParseObject("Order");
+        ParseObject orderObject = new ParseObject("Order");  //會在ParseServer上產生Class為Order
         orderObject.put("note", text);
         orderObject.put("storeInfo", spinner.getSelectedItem());
         orderObject.put("menu", menuResult);
 
+
+        //儲存ParseObject物件
         orderObject.saveInBackground(new SaveCallback() {
             @Override
             public void done(ParseException e) {
@@ -271,7 +305,7 @@ public class MainActivity extends AppCompatActivity {
                 menuResult = data.getStringExtra("result");
 
                 try {
-                    JSONArray array = new JSONArray(menuResult);
+                    JSONArray array = new JSONArray(menuResult);  //將menuResult(JSONArray=>String)轉成JSONArray(String=>JSONArray)
 
                     String text = "";
 
@@ -335,6 +369,8 @@ public class MainActivity extends AppCompatActivity {
         //startActivity(intent);
         startActivityForResult(intent, REQUEST_CODE_CAMERA);
     }
+
+
 
     @Override
     protected void onStart() {
