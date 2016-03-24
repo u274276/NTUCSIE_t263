@@ -1,12 +1,13 @@
 package com.example.simpleui.simpleui;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,20 +17,22 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.parse.FindCallback;
-import com.parse.Parse;
 import com.parse.ParseException;
+import com.parse.ParseFile;
 import com.parse.ParseObject;
 import com.parse.ParseQuery;
 import com.parse.SaveCallback;
@@ -38,17 +41,19 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.jar.Manifest;
+import android.Manifest;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CODE_MENU_ACTIVITY = 0;
     private static final int REQUEST_CODE_CAMERA = 1;
+
+    private boolean hasPhoto = false;
 
     TextView textView;
     EditText editText;
@@ -56,11 +61,13 @@ public class MainActivity extends AppCompatActivity {
     ListView listView;
     Spinner spinner;
     ImageView photoView;
+    ProgressDialog progressDialog;
+    ProgressBar progressBar;
 
     SharedPreferences sp;
     Editor editor;
 
-    String menuResult;
+    String menuResult ="";
     List<ParseObject> queryResults;
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,13 +119,27 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 editor.putBoolean("hideCheckBox", hideCheckBox.isChecked());
                 editor.apply();
+
+                if (isChecked) {
+                    photoView.setVisibility(View.GONE);
+                } else {
+                    photoView.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                goToDetailOrder(position);
             }
         });
 
         setListView();
         setSpinner();
 
-
+        progressDialog = new ProgressDialog(this);
+        progressBar = (ProgressBar)findViewById(R.id.progressBar);
 
         //ParseObject testObject = new ParseObject("HomeworkParse");
         ParseObject testObject = new ParseObject("TestObject");
@@ -130,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
                 if (e != null)
                 {
                     Log.d("debug", "[DEBUG]" + e.toString());
+                    progressBar.setVisibility(View.GONE);
                 }
             }
         });
@@ -150,6 +172,8 @@ public class MainActivity extends AppCompatActivity {
             public void done(List<ParseObject> list, ParseException e) {
                 if (e != null) {
                     Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                    e.printStackTrace();
+                    progressBar.setVisibility(View.GONE);
                     return;
                 }
 
@@ -171,10 +195,13 @@ public class MainActivity extends AppCompatActivity {
                     data.add(item);
                 }
                 String[] from = {"note", "storeInfo", "drinkNum"};
-                int[] to = {R.id.note, R.id.storeInfo, R.id.drinkNum};
+                int[] to = {R.id.note, R.id.noteView, R.id.drinkNum};
                 //將listview_item Layout Adapter到MainActivity(activity_main) Layout, data: Map data, from:key值 to:layout elements.
                 SimpleAdapter adapter = new SimpleAdapter(MainActivity.this, data, R.layout.listview_item, from, to);
                 listView.setAdapter(adapter);
+
+                listView.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.GONE);
             }
         });
     }
@@ -254,31 +281,57 @@ public class MainActivity extends AppCompatActivity {
         orderObject.put("storeInfo", spinner.getSelectedItem());
         orderObject.put("menu", menuResult);
 
+        if (hasPhoto)
+        {
+            Uri uri = Utils.getPhotoUri();
+            ParseFile file = new ParseFile("photo.png", Utils.uriToBytes(this, uri));
+
+            orderObject.put("photo", file);
+        }
+
+        progressDialog.setTitle("Loading...");
+        progressDialog.show();
 
         //儲存ParseObject物件
         orderObject.saveInBackground(new SaveCallback() {
             @Override
             public void done(ParseException e) {
+                progressDialog.dismiss();
                 if (e == null)
                 {
+                    Log.d("debug","[XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX]");
                     Toast.makeText(MainActivity.this, "Submit OK", Toast.LENGTH_LONG).show();
+
                 }
+                else
+                {
+                    Toast.makeText(MainActivity.this, "Submit Fail", Toast.LENGTH_LONG).show();
+                }
+
+                photoView.setImageResource(0);
+                textView.setText("");
+                editText.setText("");
+                menuResult = "";
+                hasPhoto = false;
+                setListView();
+
             }
         });
 
         Utils.writeFile(this, "history.txt", text + '\n');
 
-        if (hideCheckBox.isChecked())
-        {
-            Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
-            textView.setText("*****");
-            editText.setText("*****");
-            return;  //直接結束
-        }
-        textView.setText(text);
-        editText.setText("");
+//        if (hideCheckBox.isChecked())
+//        {
+//            Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
+//            textView.setText("*****");
+//            editText.setText("*****");
+//            return;  //直接結束
+//        }
+//        textView.setText(text);
+//        editText.setText("");
+//
+//        setListView();
 
-        setListView();
     }
 
     public void goToMenu(View view)
@@ -331,8 +384,28 @@ public class MainActivity extends AppCompatActivity {
             if (resultCode == RESULT_OK)
             {
                 photoView.setImageURI(Utils.getPhotoUri());
+                hasPhoto = true;
             }
         }
+    }
+
+    public void goToDetailOrder(int position)
+    {
+        ParseObject object = queryResults.get(position);
+
+        Intent intent = new Intent();
+        intent.setClass(this, OrderDetailActivity.class);
+
+        intent.putExtra("note", object.getString("note"));
+        intent.putExtra("storeInfo", object.getString("storeInfo"));
+        intent.putExtra("menu", object.getString("menu"));
+
+        if (object.getParseFile("photo") != null)
+        {
+            intent.putExtra("photoURL", object.getParseFile("photo").getUrl());
+        }
+
+        startActivity(intent);
     }
 
     @Override
@@ -358,16 +431,23 @@ public class MainActivity extends AppCompatActivity {
 
     private void goToCamera()
     {
-        /*if (Build.VERSION.SDK_INT >= 23)
+        //判斷SDK版本若大於23開啟外部儲存裝置權限
+        if (Build.VERSION.SDK_INT >= 23)
         {
-            if(checkSelfPermission(Manifest.))
-        }*/
+            if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            {
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+                return;
+            }
+        }
         Intent intent = new Intent();
         intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
         intent.putExtra(MediaStore.EXTRA_OUTPUT, Utils.getPhotoUri());
 
         //startActivity(intent);
         startActivityForResult(intent, REQUEST_CODE_CAMERA);
+
+
     }
 
 
