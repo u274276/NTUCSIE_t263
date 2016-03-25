@@ -318,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Utils.writeFile(this, "history.txt", text + '\n');
+//        Utils.writeFile(this, "history.txt", text + '\n');
 
 //        if (hideCheckBox.isChecked())
 //        {
