@@ -12,7 +12,15 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
@@ -30,7 +38,10 @@ public class OrderDetailActivity extends AppCompatActivity {
     ImageView photo;
     ImageView staticMapimageView;
     WebView webView;
-    Switch switchView;
+    Switch switchView, closeView;
+    MapFragment mapFragment;
+    GoogleMap map;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +55,16 @@ public class OrderDetailActivity extends AppCompatActivity {
         staticMapimageView = (ImageView)findViewById(R.id.staticMapimageView);
         webView = (WebView)findViewById(R.id.webView);
         switchView = (Switch)findViewById(R.id.switchView);
+        closeView = (Switch)findViewById(R.id.closeView);
+
+        mapFragment = (MapFragment)getFragmentManager().findFragmentById(R.id.mapFragment);
+
+        mapFragment.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(GoogleMap googleMap) {
+                map = googleMap;
+            }
+        });
 
         note.setText(getIntent().getStringExtra("note"));
 
@@ -148,7 +169,8 @@ public class OrderDetailActivity extends AppCompatActivity {
 
 
         //切換 staticMapimageView 與 webView
-        SwitchView(switchView);
+        SwitchView();
+        CloseView();
 
     }
 
@@ -178,7 +200,25 @@ public class OrderDetailActivity extends AppCompatActivity {
             staticMapimageView.setImageBitmap(bmp);
             webView.setVisibility(View.GONE);
 
+            LatLng location = new LatLng(latlng[0], latlng[1]);
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 17));
+
+            String[] storeInfos = getIntent().getStringExtra("storeInfo").split(",");
+            map.addMarker(new MarkerOptions()
+                            .title(storeInfos[0])
+                            .snippet(storeInfos[1])
+                            .position(location)
+            );
+
+            map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+                @Override
+                public boolean onMarkerClick(Marker marker) {
+                    Toast.makeText(OrderDetailActivity.this, marker.getTitle(), Toast.LENGTH_LONG).show();
+                    return false;
+                }
+            });
             super.onPostExecute(bytes);
+
         }
 
 
@@ -210,7 +250,7 @@ public class OrderDetailActivity extends AppCompatActivity {
 
     }
 
-    public void SwitchView(Switch switchView) {
+    public void SwitchView() {
         switchView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 
             @Override
@@ -228,4 +268,28 @@ public class OrderDetailActivity extends AppCompatActivity {
             }
         });
     }
+
+    public void CloseView() {
+        closeView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+                // TODO Auto-generated method stub
+                if (isChecked) {
+                    photo.setVisibility(View.GONE);
+                    staticMapimageView.setVisibility(View.GONE);
+                    webView.setVisibility(View.GONE);
+                }
+                else {
+                    photo.setVisibility(View.VISIBLE);
+                    staticMapimageView.setVisibility(View.VISIBLE);
+                    webView.setVisibility(View.VISIBLE);
+
+                }
+            }
+        });
+    }
+
+
 }
