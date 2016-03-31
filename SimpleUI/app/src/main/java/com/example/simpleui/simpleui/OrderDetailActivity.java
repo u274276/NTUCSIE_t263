@@ -6,8 +6,11 @@ import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.webkit.WebView;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
@@ -27,6 +30,7 @@ public class OrderDetailActivity extends AppCompatActivity {
     ImageView photo;
     ImageView staticMapimageView;
     WebView webView;
+    Switch switchView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +43,7 @@ public class OrderDetailActivity extends AppCompatActivity {
         photo = (ImageView)findViewById(R.id.photoView);
         staticMapimageView = (ImageView)findViewById(R.id.staticMapimageView);
         webView = (WebView)findViewById(R.id.webView);
-
+        switchView = (Switch)findViewById(R.id.switchView);
 
         note.setText(getIntent().getStringExtra("note"));
 
@@ -141,6 +145,11 @@ public class OrderDetailActivity extends AppCompatActivity {
 //            }
 //
 //        }.execute(url);
+
+
+        //切換 staticMapimageView 與 webView
+        SwitchView(switchView);
+
     }
 
     class GeoCodingTask extends AsyncTask<String, Void, byte[]>
@@ -167,6 +176,8 @@ public class OrderDetailActivity extends AppCompatActivity {
 
             Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
             staticMapimageView.setImageBitmap(bmp);
+            webView.setVisibility(View.GONE);
+
             super.onPostExecute(bytes);
         }
 
@@ -191,9 +202,30 @@ public class OrderDetailActivity extends AppCompatActivity {
         protected void onPostExecute(byte[] bytes) {
             Bitmap bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
             photo.setImageBitmap(bmp);
+            //webView.setVisibility(View.VISIBLE);
+
             super.onPostExecute(bytes);
         }
 
 
+    }
+
+    public void SwitchView(Switch switchView) {
+        switchView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+                // TODO Auto-generated method stub
+                if (isChecked) {
+                    staticMapimageView.setVisibility(View.GONE);
+                    webView.setVisibility(View.VISIBLE);
+
+                } else {
+                    staticMapimageView.setVisibility(View.VISIBLE);
+                    webView.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 }
