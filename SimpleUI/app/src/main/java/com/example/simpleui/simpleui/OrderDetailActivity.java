@@ -277,15 +277,26 @@ public class OrderDetailActivity extends AppCompatActivity {
                                          boolean isChecked) {
                 // TODO Auto-generated method stub
                 if (isChecked) {
+                    switchView.setEnabled(false);
+
                     photo.setVisibility(View.GONE);
                     staticMapimageView.setVisibility(View.GONE);
                     webView.setVisibility(View.GONE);
                 }
                 else {
-                    photo.setVisibility(View.VISIBLE);
-                    staticMapimageView.setVisibility(View.VISIBLE);
-                    webView.setVisibility(View.VISIBLE);
+                    switchView.setEnabled(true);
 
+                    photo.setVisibility(View.VISIBLE);
+                    if (switchView.isChecked())
+                    {
+                        webView.setVisibility(View.VISIBLE);
+                        staticMapimageView.setVisibility(View.GONE);
+                    }
+                    else
+                    {
+                        staticMapimageView.setVisibility(View.VISIBLE);
+                        webView.setVisibility(View.GONE);
+                    }
                 }
             }
         });
